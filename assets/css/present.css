@@ -26,6 +26,11 @@
 @keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translate(-1.2%, -.8%); } }
 @keyframes fbFloat { 0%, 100% { transform: translate(18%, -12%); } 50% { transform: translate(18%, -16%) scale(1.03); } }
 .slide-title .media img { object-position: 30% 100%; }
+/* vidéo de fond en boucle (par-dessus l'image, qui reste en secours) : pas d'effet Ken Burns ni d'effets CSS doublons */
+.media .bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.media.video-failed .bg-video { display: none; }
+.slide.is-active .media.has-video:not(.video-failed) img { animation: none; }
+.media.has-video:not(.video-failed) ~ .holo-fx, .media.has-video:not(.video-failed) ~ .walk-fx { display: none; }
 
 /* voile sombre sous le texte */
 .veil { position: absolute; inset: 0; pointer-events: none;

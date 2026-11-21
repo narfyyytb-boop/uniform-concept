@@ -67,7 +67,10 @@
   var room = { imgs: [], timer: null, mode: 0, paused: false };
   function prepareRoom(s, media) {
     var alt = media.dataset.alt;
-    Promise.all([loadImg('assets/img/expo/room-rest', 'A student’s room set up as a calm rest room.'), loadImg('assets/img/expo/room-gym', 'The same room turned into a gym.')])
+    // avec une vidéo de fond, l'image ne sert que de secours : une seule suffit
+    var pair = media.classList.contains('has-video') ? Promise.reject(new Error('video'))
+      : Promise.all([loadImg('assets/img/expo/room-rest', 'A student’s room set up as a calm rest room.'), loadImg('assets/img/expo/room-gym', 'The same room turned into a gym.')]);
+    pair
       .then(function (pair) {
         pair.forEach(function (img, i) { img.className = 'room-img' + (i === 0 ? ' is-on' : ''); media.insertBefore(img, media.firstChild); });
         room.imgs = pair; media.classList.add('has-img'); syncRoomImg();
@@ -94,6 +97,37 @@
     if (on && !reduced() && !room.paused) room.timer = setInterval(function () { setMode((room.mode + 1) % modes.length); }, 2600);
   }
   modes.forEach(function (b, i) { b.addEventListener('click', function () { room.paused = true; roomCycle(false); setMode(i); }); });
+
+  /* ------------------------------------------------------------------ vidéos de fond en boucle */
+  // seule la vidéo de l'écran actif joue ; la suivante se précharge ; « réduire les animations » = affiche fixe ;
+  // si la vidéo ne se charge pas, elle disparaît et l'image (avec son effet Ken Burns) reste dessous
+  slides.forEach(function (s) {
+    var v = $('video[data-video]', s);
+    if (!v) return;
+    s._video = v;
+    v.autoplay = false; v.removeAttribute('autoplay'); v.muted = true;
+    try { v.pause(); } catch (err) { /* ignoré */ }
+    var media = v.closest('.media');
+    var fail = function () { media.classList.add('video-failed'); };
+    var sources = $$('source', v);
+    if (sources.length) sources[sources.length - 1].addEventListener('error', fail);
+    v.addEventListener('error', fail);
+  });
+  function syncVideos() {
+    slides.forEach(function (s, i) {
+      var v = s._video;
+      if (!v || v.closest('.video-failed')) return;
+      if (i === cur && !reduced() && !cfgOpen) {
+        v.preload = 'auto';
+        var p = v.play(); if (p && p.catch) p.catch(function () { /* lecture refusée : l'affiche reste */ });
+      } else {
+        if (!v.paused) v.pause();
+        if (reduced() && v.currentTime > 0) v.currentTime = 0; // image fixe = l'affiche (1re image)
+      }
+    });
+    var nx = slides[cur + 1];
+    if (nx && nx._video && !reduced()) nx._video.preload = 'auto';
+  }
 
   /* ------------------------------------------------------------------ navigation */
   var live = $('#live'), count = $('#count'), bar = $('#bar'), who = $('#who');
@@ -127,6 +161,7 @@
     if (s.classList.contains('slide-room')) { room.paused = false; setMode(0); roomCycle(true); } else roomCycle(false);
     // configurateur : on le prépare dès l'écran « In 3D »
     if (s.classList.contains('slide-3d')) prepareConfig();
+    syncVideos();
   }
   function next() {
     var s = slides[cur];
@@ -229,6 +264,7 @@
     syncMotion();
     live.textContent = r ? 'Animations reduced' : 'Animations restored';
     if (slides[cur].classList.contains('slide-room')) roomCycle(true);
+    syncVideos();
   });
   syncMotion();
 
@@ -279,6 +315,7 @@
     cfg.classList.add('is-open'); cfg.setAttribute('aria-hidden', 'false');
     deck.setAttribute('inert', ''); $('#controls').setAttribute('inert', '');
     live.textContent = '3D configurator opened';
+    syncVideos();
     backBtn.focus();
     if (cfgReady) immerse();
   }
@@ -288,6 +325,7 @@
     cfg.classList.remove('is-open'); cfg.setAttribute('aria-hidden', 'true');
     deck.removeAttribute('inert'); $('#controls').removeAttribute('inert');
     live.textContent = 'Back to slide ' + (cur + 1) + ': ' + slides[cur].dataset.title;
+    syncVideos();
     window.focus();
     open3d.focus({ preventScroll: true });
   }
