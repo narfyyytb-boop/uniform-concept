@@ -115,7 +115,7 @@ $$('dialog.modal').forEach(d => {
 const SEARCH_INDEX = [
   ['Home', 'The next generation at Sophie Barat', '#accueil'],
   ['The collection', 'Uniforms, lookbook, details and finishes', '#collection'],
-  ['The school of the future', 'Virtual school things and holograms, create any room, moving walkways, the school shop', '#futur'],
+  ['The school of the future', 'Virtual school things and holograms, boarding school with a shopping centre and restaurants, rooms that change with a tablet, moving walkways', '#futur'],
   ['3D configurator', 'Build the girl’s or boy’s outfit in 3D', '#configurateur'],
   ['History', 'The school and its history', '#histoire'],
   ['Educational vision', 'Ambitions and teaching approach', '#projet'],
