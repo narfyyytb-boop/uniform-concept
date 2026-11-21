@@ -262,10 +262,6 @@ body.config-open .site-header { visibility: hidden; }
 .section-light .lead { color: var(--muted-dark); }
 .section-light .tag { background: rgba(8, 125, 255, .1); color: #0a52c7; border-color: rgba(8, 125, 255, .25); }
 .section-deep { background: radial-gradient(ellipse at 20% 0%, #182f86 0%, #0a1d4e 45%, #061638 80%); }
-.draft { position: relative; color: inherit; opacity: .92; }
-[data-draft]::before { content: "To be confirmed"; display: inline-block; margin-right: 8px; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255, 196, 61, .16); color: #ffd36b; border: 1px solid rgba(255, 196, 61, .4); vertical-align: 2px; }
-.section-light [data-draft]::before { background: #fff1c7; color: #7a5200; border-color: #f0c55a; }
-html.hide-drafts [data-draft]::before { display: none; }
 .note { display: flex; gap: 10px; align-items: flex-start; margin-top: 30px; font-size: .9rem; color: var(--muted-dark); }
 
 /* collection */
@@ -342,6 +338,28 @@ html.hide-drafts [data-draft]::before { display: none; }
 .life-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, .06); }
 .life-num { font-size: 3.4rem; font-weight: 800; letter-spacing: -.05em; background: var(--grad-text); -webkit-background-clip: text; background-clip: text; color: transparent; display: block; line-height: 1; margin-bottom: 16px; }
 .life-card p { color: var(--muted); margin: 0; }
+
+/* l'école du futur (cartes numérotées + icône) */
+.future-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.future-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.future-top .life-num { margin-bottom: 0; }
+.future-card h3 { font-size: 1.25rem; margin: 0 0 10px; }
+/* hologramme : l'icône flotte au-dessus d'un faisceau bleu électrique et violet */
+.holo { position: relative; width: 56px; height: 56px; display: grid; place-items: center; flex-shrink: 0; }
+.holo::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: radial-gradient(circle, rgba(8, 125, 255, .45), rgba(103, 45, 255, .25) 55%, transparent 72%); filter: blur(6px); }
+.holo-beam { position: absolute; left: 50%; bottom: 6px; width: 34px; height: 30px; transform: translateX(-50%); background: linear-gradient(to top, rgba(8, 125, 255, .55), rgba(103, 45, 255, .2) 70%, transparent); clip-path: polygon(38% 100%, 62% 100%, 100% 0, 0 0); opacity: .7; }
+.holo-ico { position: relative; width: 36px; height: 36px; color: #8fd8ff; filter: drop-shadow(0 0 6px var(--electric)) drop-shadow(0 0 12px var(--violet)); }
+.future-holo .holo-ico { animation: holoFloat 3.6s ease-in-out infinite, holoFlicker 5s linear infinite; }
+.future-holo .holo::before { animation: holoGlow 3.6s ease-in-out infinite; }
+.future-holo .holo-beam { animation: holoBeam 3.6s ease-in-out infinite; }
+@keyframes holoFloat { 50% { transform: translateY(-5px); } }
+@keyframes holoFlicker { 0%, 46%, 50%, 100% { opacity: 1; } 48% { opacity: .55; } }
+@keyframes holoGlow { 50% { opacity: .6; transform: scale(1.12); } }
+@keyframes holoBeam { 50% { opacity: .4; } }
+html.reduce-motion .future-holo .holo-ico, html.reduce-motion .future-holo .holo::before, html.reduce-motion .future-holo .holo-beam { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .future-holo .holo-ico, .future-holo .holo::before, .future-holo .holo-beam { animation: none !important; }
+}
 
 /* actualités */
 .news-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
@@ -449,7 +467,6 @@ html.hide-drafts [data-draft]::before { display: none; }
 .legal h2 { font-size: 1.45rem; margin-top: 2.2em; }
 .legal p, .legal li { color: var(--muted); }
 .legal a { color: var(--cyan); }
-.legal .placeholder { color: #ffd36b; }
 
 /* ------------------------------------------------------------------ animations d'apparition */
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s var(--ease), transform .8s var(--ease); transition-delay: var(--d, 0s); }
@@ -470,7 +487,7 @@ html.hide-drafts [data-draft]::before { display: none; }
   .features { grid-template-columns: 1fr; gap: 14px; }
   .feature { min-height: 96px; }
   .products { grid-template-columns: repeat(2, 1fr); }
-  .values-list, .practical-grid { grid-template-columns: repeat(2, 1fr); }
+  .values-list, .practical-grid, .future-grid { grid-template-columns: repeat(2, 1fr); }
   body.config-open .product-card { display: block; }
 }
 @media (max-width: 960px) {
@@ -523,7 +540,7 @@ html.hide-drafts [data-draft]::before { display: none; }
   .product-card .pc-specs { border-top: 1px solid rgba(167, 191, 255, .25); padding-top: 16px; }
   .feature img { width: 92px; height: 80px; }
   .products { grid-template-columns: 1fr; }
-  .values-list, .practical-grid { grid-template-columns: 1fr; }
+  .values-list, .practical-grid, .future-grid { grid-template-columns: 1fr; }
   .lookbook-details { grid-template-columns: 1fr 1fr; gap: 10px; }
   .footer-values { display: none; }
   .footer-inner { justify-content: space-between; }

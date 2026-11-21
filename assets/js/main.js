@@ -74,7 +74,7 @@ nav?.addEventListener('click', e => { if (e.target.closest('a')) setMenu(false);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && nav?.classList.contains('is-open')) { setMenu(false); menuBtn.focus(); } });
 
 // lien actif selon la section visible
-const spyTargets = [['collection', 'The collection'], ['etablissement', 'The school'], ['vie-scolaire', 'School life'], ['actualites', 'News'], ['logo', 'News']];
+const spyTargets = [['collection', 'The collection'], ['futur', 'School of the future'],['etablissement', 'The school'], ['vie-scolaire', 'School life'], ['actualites', 'News'], ['logo', 'News']];
 const navByLabel = label => $$('.nav-link').find(n => n.textContent.trim().startsWith(label));
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver(entries => {
@@ -115,12 +115,12 @@ $$('dialog.modal').forEach(d => {
 const SEARCH_INDEX = [
   ['Home', 'The next generation at Sophie Barat', '#accueil'],
   ['The collection', 'Uniforms, lookbook, details and finishes', '#collection'],
+  ['The school of the future', 'Virtual school things and holograms, create any room, moving walkways, the school shop', '#futur'],
   ['3D configurator', 'Build the girl’s or boy’s outfit in 3D', '#configurateur'],
   ['History', 'The school and its history', '#histoire'],
   ['Educational vision', 'Ambitions and teaching approach', '#projet'],
   ['Student support', 'Mentoring, guidance, extra help', '#accompagnement'],
   ['Values', 'Excellence, learning, sharing, future', '#valeurs'],
-  ['Practical information', 'Address, opening hours, phone', '#infos'],
   ['School life', 'Activities, projects, events', '#vie-scolaire'],
   ['News', 'The latest news', '#actualites'],
   ['The logo', 'The logo, its colours and the slogan', '#logo'],
