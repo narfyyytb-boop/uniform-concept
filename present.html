@@ -39,13 +39,22 @@
 <main class="deck" id="deck" aria-roledescription="presentation" aria-label="Sophie Barat: a new logo, new uniforms and the school of the future">
 
   <!-- 1 · Title -->
-  <section class="slide slide-title" data-title="A new logo. New uniforms. The school of the future." data-part="Part 1">
-    <div class="media" data-img="assets/img/lycee-soir" data-alt="The Sophie Barat high school at dusk.">
+  <section class="slide slide-title" data-title="A new logo. New uniforms. The school of the future." data-part="Part 1" data-fx="city">
+    <div class="media has-video" data-img="assets/img/lycee-soir" data-alt="The Sophie Barat high school at dusk.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-star"/></svg></div>
+      <video class="bg-video" data-video muted loop playsinline autoplay preload="auto" poster="assets/video/expo/boarding-poster.webp" aria-hidden="true" tabindex="-1">
+        <source src="assets/video/expo/boarding.mp4" type="video/mp4">
+        <source src="assets/video/expo/boarding.webm" type="video/webm">
+      </video>
     </div>
     <div class="veil veil-center"></div>
+    <div class="intro-black" aria-hidden="true"></div>
     <div class="content center">
-      <img class="title-logo" src="assets/img/logo-sophie-barat-blanc.png" width="668" height="330" alt="Sophie Barat logo">
+      <div class="title-logo-wrap">
+        <img class="title-logo" src="assets/img/logo-sophie-barat-blanc.png" width="668" height="330" alt="Sophie Barat logo">
+        <span class="logo-shine" aria-hidden="true"></span>
+        <span class="logo-scan" aria-hidden="true"></span>
+      </div>
       <h1 class="big-lines"><span>A new logo.</span> <span>New uniforms.</span> <span class="grad">The school of the future.</span></h1>
     </div>
   </section>
@@ -139,6 +148,12 @@
     </div>
     <div class="holo-fx" aria-hidden="true"><span class="hf-glow"></span><span class="hf-ring"></span><span class="hf-ring r2"></span><span class="hf-beam"></span></div>
     <div class="veil"></div>
+    <!-- hologramme 3D (three.js) : apparaît au repère 4, puis un objet par repère ; « Next object » fait défiler -->
+    <div class="holo-stage">
+      <div class="holo-canvas"></div>
+      <p class="holo-label" aria-hidden="true"></p>
+      <button type="button" class="holo-next">Next object <svg class="ico" aria-hidden="true"><use href="#i-right"/></svg></button>
+    </div>
     <div class="content bottom">
       <h2 class="slide-h">Virtual school things</h2>
       <ul class="keys">
@@ -146,12 +161,16 @@
         <li class="step" data-step="2">No heavy books</li>
         <li class="step" data-step="3">Everything on a tablet or in holograms</li>
       </ul>
-      <p class="punch step" data-step="4">Good for your back. <span class="grad">Good for the planet.</span></p>
+      <p class="punch step" data-step="8">Good for your back. <span class="grad">Good for the planet.</span></p>
+      <span class="sr-only holo-mark" data-step="4" data-obj="0">Hologram: your book appears</span>
+      <span class="sr-only holo-mark" data-step="5" data-obj="1">Hologram: your timetable on a tablet</span>
+      <span class="sr-only holo-mark" data-step="6" data-obj="2">Hologram: a calculator</span>
+      <span class="sr-only holo-mark" data-step="7" data-obj="3">Hologram: a globe</span>
     </div>
   </section>
 
   <!-- 8 · The boarding school -->
-  <section class="slide" data-title="The boarding school" data-part="Part 2">
+  <section class="slide" data-title="The boarding school" data-part="Part 2" data-fx="city">
     <div class="media has-video" data-img="assets/img/expo/boarding" data-alt="The school’s boarding house, modern and full of light.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-house"/></svg></div>
       <video class="bg-video" data-video muted loop playsinline autoplay preload="metadata" poster="assets/video/expo/boarding-poster.webp" aria-hidden="true" tabindex="-1">
@@ -202,29 +221,30 @@
 
   <!-- 11 · Your room, any room -->
   <section class="slide slide-room" data-title="Your room, any room" data-part="Part 2">
-    <div class="media has-video" data-room data-alt="A student’s room that can turn into a rest room or a gym.">
+    <div class="media has-video" data-room data-img="assets/img/expo/room" data-alt="A student’s room that can turn into a rest room or a gym.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-room"/></svg></div>
       <video class="bg-video" data-video muted loop playsinline autoplay preload="metadata" poster="assets/video/expo/room-poster.webp" aria-hidden="true" tabindex="-1">
         <source src="assets/video/expo/room.mp4" type="video/mp4">
         <source src="assets/video/expo/room.webm" type="video/webm">
       </video>
     </div>
+    <div class="room-sweep" aria-hidden="true"></div>
     <div class="veil"></div>
     <div class="content bottom">
       <h2 class="slide-h">Your room, any room</h2>
       <p class="key">A tablet in every room</p>
       <p class="key step" data-step="1">Turn your room into any room: rest room, gym…</p>
-      <div class="modes" role="group" aria-label="Room modes">
-        <button type="button" class="mode is-on" data-mode="rest" aria-pressed="true">Rest</button>
-        <button type="button" class="mode" data-mode="gym" aria-pressed="false">Gym</button>
-        <button type="button" class="mode" data-mode="music" aria-pressed="false">Music</button>
-        <button type="button" class="mode" data-mode="study" aria-pressed="false">Study</button>
+      <div class="modes step" data-step="1" role="group" aria-label="Room modes">
+        <button type="button" class="mode" data-mode="rest" aria-pressed="false">Rest</button>
+        <button type="button" class="mode" data-mode="gym" data-step="2" aria-pressed="false">Gym</button>
+        <button type="button" class="mode" data-mode="music" data-step="3" aria-pressed="false">Music</button>
+        <button type="button" class="mode" data-mode="study" data-step="4" aria-pressed="false">Study</button>
       </div>
     </div>
   </section>
 
   <!-- 12 · Moving walkways (Timéa) -->
-  <section class="slide slide-walk" data-title="Moving walkways" data-part="Part 2" data-speaker="Timéa">
+  <section class="slide slide-walk" data-title="Moving walkways" data-part="Part 2" data-speaker="Timéa" data-fx="walk">
     <div class="media has-video" data-img="assets/img/expo/walkway" data-alt="A moving walkway carries students along a school corridor.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-walkway"/></svg></div>
       <video class="bg-video" data-video muted loop playsinline autoplay preload="metadata" poster="assets/video/expo/walkway-poster.webp" aria-hidden="true" tabindex="-1">
@@ -253,6 +273,9 @@
     </div>
   </section>
 </main>
+
+<!-- rendu « film » : grain, vignettage, bandes cinéma (écrans à image ou vidéo) -->
+<div class="film" aria-hidden="true"><div class="film-grain"></div><div class="film-vignette"></div><div class="film-bars"></div></div>
 
 <!-- speaker / part indicator -->
 <p class="who" id="who" aria-hidden="true"></p>
