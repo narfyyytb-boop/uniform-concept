@@ -712,7 +712,15 @@
     map.focus = mark ? +mark.dataset.zone : -1;
     mapSyncTags();
     if (!map.inst) return;
-    if (map.focus < 0) map.inst.overview(instant); else map.inst.focus(map.focus);
+    if (map.focus < 0) { map.inst.overview(instant); return; }
+    // flèches : même plongée qu'un clic sur la zone, puis sa vidéo s'ouvre (en revenant sur l'écran, simple rapprochement)
+    if (instant) { map.inst.focus(map.focus); return; }
+    map.opener = mapTags[map.focus];
+    live.textContent = mapName(map.focus);
+    map.flying = map.focus;
+    map.inst.fly(map.focus);
+    mapSyncTags();
+    kick();
   }
   // clic sur une zone : la caméra s'envole (~1,2 s), puis la vidéo s'ouvre
   function mapPick(i) {
@@ -963,15 +971,15 @@
   }
   function next() {
     if (intro.on) { endIntro(); return; }
-    if (cur === mapIdx && mapClosePanel(false)) return; // vidéo ouverte : d'abord retour à la carte
+    // écran du campus : chaque flèche plonge directement dans la zone suivante (la vidéo ouverte se ferme d'elle-même)
     var s = slides[cur];
     if (s._shown < s._steps) { setSteps(s, s._shown + 1); announceStep(s); prevBtn.disabled = false; return; }
     go(cur + 1);
   }
   function prev() {
     if (intro.on) { endIntro(); return; }
-    if (cur === mapIdx && mapClosePanel(false)) return;
     var s = slides[cur];
+    if (cur === mapIdx && s._shown === 0 && mapClosePanel(false)) return;
     if (s._shown > 0) { setSteps(s, s._shown - 1); prevBtn.disabled = cur === 0 && s._shown === 0; return; }
     go(cur - 1);
   }
