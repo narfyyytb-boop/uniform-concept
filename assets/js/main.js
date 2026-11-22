@@ -385,3 +385,7 @@ function openSheet(id, opener) {
   $('[data-try-sheet]', sheet).addEventListener('click', () => { closeDialog(sheet); selectItem(i.id); setImmersive(true); });
   openDialog(sheet, opener);
 }
+
+/* ------------------------------------------------------------------ QR code de la présentation */
+// ?config=1 : le configurateur s'ouvre directement (même action que le bouton [data-open-config])
+if (new URLSearchParams(location.search).get('config') === '1') $('[data-open-config]')?.click();

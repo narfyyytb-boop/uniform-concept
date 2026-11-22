@@ -131,12 +131,36 @@
         <p class="kicker">The configurator</p>
         <h2 class="slide-h">In 3D</h2>
         <button class="btn btn-primary btn-3d" type="button" id="open-3d"><svg class="ico" aria-hidden="true"><use href="#i-cube"/></svg> Turn it around in 3D</button>
+        <!-- QR code : ouvre directement le configurateur sur le téléphone du public (vérifié par tools/qr/qr_verify.py) -->
+        <div class="qr-card">
+          <img class="qr-img" src="assets/img/qr-config.svg" width="164" height="164" alt="QR code: open the 3D uniform configurator on your phone (narfyyytb-boop.github.io/uniform-concept/?config=1)">
+          <p class="qr-text"><strong>Scan &amp; design</strong> your own uniform</p>
+        </div>
       </div>
       <figure class="split-img"><img src="assets/img/collection-groupe.webp" width="868" height="845" alt="Students wearing the new uniforms (computer-generated image)."></figure>
     </div>
   </section>
 
-  <!-- 7 · Virtual school things -->
+  <!-- 7 · Before / after : la vraie photo du lycée, puis le lycée du futur (même cadrage) -->
+  <!-- 1er appui sur « suivant » : le curseur balaie tout seul et révèle le futur ; on peut aussi le faire glisser n'importe où -->
+  <section class="slide slide-ba" data-title="Our school… tomorrow" data-part="Part 1">
+    <div class="media ba" data-ba>
+      <img class="ba-img ba-before" src="assets/img/lycee-jour.webp" srcset="assets/img/lycee-jour-sm.webp 944w, assets/img/lycee-jour.webp 1888w" sizes="100vw" width="1888" height="544" alt="Our school today: the real photo of the Sophie Barat high school.">
+      <div class="ba-after" aria-hidden="true"></div>
+      <div class="ba-line" aria-hidden="true"><span class="ba-glow"></span><span class="ba-knob"><svg class="ico" viewBox="0 0 24 24"><path d="m9 7-5 5 5 5m6-10 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+      <span class="ba-tag ba-tag-new" aria-hidden="true">Tomorrow</span>
+      <span class="ba-tag ba-tag-old" aria-hidden="true">Today</span>
+    </div>
+    <div class="veil ba-veil"></div>
+    <div class="content bottom">
+      <h2 class="slide-h">Our school… <span class="grad">tomorrow</span></h2>
+      <p class="key ba-alt">The school of the future</p>
+      <button type="button" class="ba-toggle" aria-label="Compare today and tomorrow">Compare</button>
+      <span class="sr-only ba-mark" data-step="1">Tomorrow: the school of the future</span>
+    </div>
+  </section>
+
+  <!-- 8 · Virtual school things -->
   <section class="slide slide-holo" data-title="Virtual school things" data-part="Part 1" style="--hx:26%;--hy:38%">
     <!-- --hx / --hy : position de l’hologramme (au-dessus de la main) dans l’image, à ajuster une fois l’image en place -->
     <div class="media has-video" data-img="assets/img/expo/hologram" data-alt="A glowing hologram of schoolwork floats just above a student’s hand.">
@@ -169,7 +193,41 @@
     </div>
   </section>
 
-  <!-- 8 · The boarding school -->
+  <!-- 9 · Map : maquette 3D du lycée du futur (three.js, present-map.js) — introduction de la partie 2 -->
+  <!-- repères : vue d'ensemble, puis chaque appui allume et pointe une zone (Boarding → Walkways), sans ouvrir la vidéo -->
+  <section class="slide slide-map plain" data-title="Welcome to our school" data-part="Part 2">
+    <div class="map-stage">
+      <div class="map-canvas"></div>
+      <div class="map-plan" aria-hidden="true"><span class="mp b1"></span><span class="mp b2"></span><span class="mp b3"></span><span class="mp b4"></span><span class="mp b5"></span><span class="mp yard"></span></div>
+      <ul class="map-tags" aria-label="Zones of the school">
+        <li><button type="button" class="map-tag" data-zone="0" style="--fx:22%;--fy:30%"><svg class="ico" aria-hidden="true"><use href="#i-house"/></svg>Boarding school</button></li>
+        <li><button type="button" class="map-tag" data-zone="1" style="--fx:74%;--fy:68%"><svg class="ico" aria-hidden="true"><use href="#i-shop"/></svg>Shopping centre</button></li>
+        <li><button type="button" class="map-tag" data-zone="2" style="--fx:24%;--fy:70%"><svg class="ico" aria-hidden="true"><use href="#i-food"/></svg>Restaurants</button></li>
+        <li><button type="button" class="map-tag" data-zone="3" style="--fx:76%;--fy:28%"><svg class="ico" aria-hidden="true"><use href="#i-room"/></svg>Rooms</button></li>
+        <li><button type="button" class="map-tag" data-zone="4" style="--fx:50%;--fy:47%"><svg class="ico" aria-hidden="true"><use href="#i-walkway"/></svg>Moving walkways</button></li>
+      </ul>
+    </div>
+    <div class="content map-head">
+      <h2 class="slide-h">Welcome to <span class="grad">our school</span></h2>
+      <span class="sr-only map-mark" data-step="1" data-zone="0">Boarding school</span>
+      <span class="sr-only map-mark" data-step="2" data-zone="1">Shopping centre</span>
+      <span class="sr-only map-mark" data-step="3" data-zone="2">Restaurants</span>
+      <span class="sr-only map-mark" data-step="4" data-zone="3">Rooms</span>
+      <span class="sr-only map-mark" data-step="5" data-zone="4">Moving walkways</span>
+    </div>
+    <!-- panneau vidéo de la zone choisie -->
+    <div class="map-panel" role="dialog" aria-modal="false" aria-labelledby="map-panel-title" aria-hidden="true">
+      <div class="map-panel-box">
+        <video class="map-video" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1"></video>
+        <div class="map-panel-bar">
+          <p class="map-panel-title" id="map-panel-title"></p>
+          <button type="button" class="btn btn-primary map-back"><svg class="ico" aria-hidden="true"><use href="#i-left"/></svg> Back to the map</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · The boarding school -->
   <section class="slide" data-title="The boarding school" data-part="Part 2" data-fx="city">
     <div class="media has-video" data-img="assets/img/expo/boarding" data-alt="The school’s boarding house, modern and full of light.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-house"/></svg></div>
@@ -185,7 +243,7 @@
     </div>
   </section>
 
-  <!-- 9 · The shopping centre -->
+  <!-- 11 · The shopping centre -->
   <section class="slide" data-title="The shopping centre" data-part="Part 2">
     <div class="media has-video" data-img="assets/img/expo/mall" data-alt="A big, bright shopping centre inside the school.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-shop"/></svg></div>
@@ -202,7 +260,7 @@
     </div>
   </section>
 
-  <!-- 10 · Restaurants -->
+  <!-- 12 · Restaurants -->
   <section class="slide" data-title="Restaurants" data-part="Part 2">
     <div class="media has-video" data-img="assets/img/expo/food" data-alt="Restaurants and food stalls inside the school.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-food"/></svg></div>
@@ -219,7 +277,7 @@
     </div>
   </section>
 
-  <!-- 11 · Your room, any room -->
+  <!-- 13 · Your room, any room -->
   <section class="slide slide-room" data-title="Your room, any room" data-part="Part 2">
     <div class="media has-video" data-room data-img="assets/img/expo/room" data-alt="A student’s room that can turn into a rest room or a gym.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-room"/></svg></div>
@@ -243,7 +301,7 @@
     </div>
   </section>
 
-  <!-- 12 · Moving walkways (Timéa) -->
+  <!-- 14 · Moving walkways (Timéa) -->
   <section class="slide slide-walk" data-title="Moving walkways" data-part="Part 2" data-speaker="Timéa" data-fx="walk">
     <div class="media has-video" data-img="assets/img/expo/walkway" data-alt="A moving walkway carries students along a school corridor.">
       <div class="fallback"><svg class="fb-ico" aria-hidden="true"><use href="#i-walkway"/></svg></div>
@@ -260,15 +318,21 @@
     </div>
   </section>
 
-  <!-- 13 · Thank you -->
+  <!-- 15 · Thank you -->
   <section class="slide slide-end plain" data-title="Thank you for listening!">
     <div class="aurora" aria-hidden="true"></div>
     <div class="content center">
       <img class="end-logo" src="assets/img/logo-sophie-barat-blanc.png" width="668" height="330" alt="Sophie Barat logo">
       <h2 class="thanks">Thank you <span class="grad">for listening!</span></h2>
-      <div class="site-link">
-        <img class="qr" src="assets/img/qr-site.svg" width="120" height="120" alt="QR code to the website narfyyytb-boop.github.io/uniform-concept">
-        <span>narfyyytb-boop.github.io/uniform-concept</span>
+      <div class="end-links">
+        <div class="site-link">
+          <img class="qr" src="assets/img/qr-site.svg" width="120" height="120" alt="QR code to the website narfyyytb-boop.github.io/uniform-concept">
+          <span>narfyyytb-boop.github.io/uniform-concept</span>
+        </div>
+        <div class="site-link">
+          <img class="qr" src="assets/img/qr-config.svg" width="120" height="120" alt="QR code: open the 3D uniform configurator on your phone">
+          <span><strong>Scan &amp; design</strong><br>your own uniform</span>
+        </div>
       </div>
     </div>
   </section>
@@ -283,7 +347,7 @@
 <!-- controls -->
 <div class="controls" id="controls">
   <button class="ctl" type="button" id="prev" aria-label="Previous"><svg class="ico" aria-hidden="true"><use href="#i-left"/></svg></button>
-  <span class="count" id="count" aria-hidden="true">1 / 13</span>
+  <span class="count" id="count" aria-hidden="true">1 / 15</span>
   <button class="ctl" type="button" id="next" aria-label="Next"><svg class="ico" aria-hidden="true"><use href="#i-right"/></svg></button>
   <span class="ctl-sep" aria-hidden="true"></span>
   <button class="ctl" type="button" id="motion" aria-pressed="false" aria-label="Reduce animations" title="Reduce animations"><svg class="ico" aria-hidden="true"><use href="#i-motion"/></svg></button>

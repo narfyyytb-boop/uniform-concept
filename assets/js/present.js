@@ -3,7 +3,8 @@
    Navigation : ← → espace, Page préc./suiv., clic à gauche / à droite, balayage.
    F : plein écran · Échap : retour au site · l'adresse suit l'écran (#3).
    Effets : ouverture cinéma, rendu « film » (grain, vignettage, bandes), parallaxe,
-   transitions de caméra, hologramme 3D (écran 7), chambre interactive (écran 11),
+   transitions de caméra, avant / après du lycée (écran 7), hologramme 3D (écran 8),
+   maquette 3D du lycée du futur (écran 9), chambre interactive (écran 13),
    particules (internat, tapis roulants). Une seule boucle requestAnimationFrame.
    ========================================================================== */
 (function () {
@@ -66,7 +67,7 @@
   }
   function prepareMedia(s) {
     var media = $('.media', s);
-    if (!media || media._loading) return;
+    if (!media || media._loading || !media.dataset.img) return;
     media._loading = true;
     if (media.hasAttribute('data-room')) probeRoom();
     loadImg(media.dataset.img, media.dataset.alt).then(function (img) {
@@ -267,8 +268,12 @@
     if (!red && body.classList.contains('film-on')) { if (frameN % 3 === 0) moveGrain(); more = true; }
     // particules
     if (!red && fx.mode) { fxDraw(t, dt); more = true; }
-    // hologramme (WebGL seulement sur l'écran 7)
+    // hologramme (WebGL seulement sur l'écran 8)
     if (holo.inst && cur === holoIdx) { try { if (holo.inst.render(t)) more = true; } catch (err) { holoFail(); } }
+    // maquette 3D (WebGL seulement sur l'écran 9)
+    if (map.inst && cur === mapIdx) { try { if (map.inst.render(t)) more = true; } catch (err) { mapFlat(); } }
+    // avant / après : balayage du curseur
+    if (baTick(t)) more = true;
     if (more) raf = requestAnimationFrame(frame); else last = 0;
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { last = 0; kick(); } });
@@ -291,7 +296,101 @@
     titleSlide.classList.remove('intro');
   }
 
-  /* ------------------------------------------------------------------ hologramme 3D (écran 7) */
+  /* ------------------------------------------------------------------ avant / après (écran 7) */
+  // la vraie photo du lycée, puis le lycée du futur (même cadrage) révélé par un curseur vertical
+  var baSlide = $('.slide-ba');
+  var ba = { el: baSlide ? $('.ba', baSlide) : null, pos: 0, from: 0, to: 0, t0: -1, dur: 0, ok: false, drag: false, instant: false };
+  var BA_IMG = 'assets/img/expo/lycee-futur';
+  function baSet(p) {
+    ba.pos = Math.max(0, Math.min(100, p));
+    baSlide.style.setProperty('--ba', ba.pos.toFixed(2) + '%');
+    baSlide.style.setProperty('--ba-n', (ba.pos / 100).toFixed(4));
+    if (ba.pos < 99.5) baSlide.classList.remove('ba-full');
+  }
+  function baEnd() {
+    ba.dur = 0;
+    baSlide.classList.remove('ba-sweeping');
+    if (ba.pos >= 99.5) baSlide.classList.add('ba-full');
+  }
+  // balayage automatique (2,6 s) ; animations réduites : le curseur se place directement
+  function baAnimate(to, dur) {
+    if (reduced() || !dur) { baSet(to); baEnd(); return; }
+    ba.from = ba.pos; ba.to = to; ba.dur = dur; ba.t0 = -1;
+    baSlide.classList.toggle('ba-sweeping', to > ba.pos);
+    kick();
+  }
+  function baTick(t) {
+    if (!ba.dur) return false;
+    if (ba.t0 < 0) ba.t0 = t;
+    var p = Math.min(1, (t - ba.t0) / ba.dur);
+    var k = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    baSet(ba.from + (ba.to - ba.from) * k);
+    if (p >= 1) { baEnd(); return false; }
+    return true;
+  }
+  function baFromX(x) {
+    var r = ba.el.getBoundingClientRect();
+    if (r.width) baSet((x - r.left) / r.width * 100);
+  }
+  // l'image du futur est-elle là ? (balise <img> + onerror : pas de fetch)
+  function baLoad() {
+    if (!baSlide) return;
+    var img = new Image(), retried = false;
+    img.className = 'ba-img'; img.alt = ''; img.decoding = 'async';
+    img.onload = function () {
+      $('.ba-after', baSlide).appendChild(img);
+      ba.ok = true;
+      baSlide.classList.add('ba-ready');
+      baSet(baSlide._shown ? (reduced() ? 50 : 100) : 0); baEnd();
+    };
+    img.onerror = function () {
+      // si la petite version manque, on essaie la grande ; sinon : la photo seule
+      if (!retried && /-sm\.webp/.test(img.currentSrc || '')) { retried = true; img.removeAttribute('srcset'); img.removeAttribute('sizes'); img.src = BA_IMG + '.webp'; return; }
+      baMissing();
+    };
+    img.sizes = '100vw';
+    img.srcset = BA_IMG + '-sm.webp 944w, ' + BA_IMG + '.webp 1888w';
+    img.src = BA_IMG + '.webp';
+  }
+  function baMissing() {
+    baSlide.classList.add('ba-missing');
+    $$('.ba-mark', baSlide).forEach(function (m) { m.remove(); });
+    baSlide._steps = maxStep(baSlide);
+    if (baSlide._shown) setSteps(baSlide, 0);
+  }
+  if (baSlide) {
+    baSet(0);
+    baSlide._onSteps = function (n) {
+      if (!ba.ok) return;
+      var instant = ba.instant; ba.instant = false;
+      if (n >= 1) baAnimate(reduced() ? 50 : 100, instant ? 0 : 2600);
+      else baAnimate(0, instant ? 0 : 700);
+    };
+    // glisser à la souris ou au doigt, n'importe où sur l'image
+    ba.el.addEventListener('pointerdown', function (e) {
+      if (!ba.ok || e.button > 0) return;
+      ba.drag = true; ba.dur = 0;
+      baSlide.classList.remove('ba-sweeping');
+      baSlide.classList.add('ba-dragging');
+      try { ba.el.setPointerCapture(e.pointerId); } catch (err) { /* ignoré */ }
+      baFromX(e.clientX);
+      e.preventDefault();
+    });
+    ba.el.addEventListener('pointermove', function (e) { if (ba.drag) baFromX(e.clientX); });
+    var baUp = function () { if (!ba.drag) return; ba.drag = false; baSlide.classList.remove('ba-dragging'); baEnd(); };
+    ba.el.addEventListener('pointerup', baUp);
+    ba.el.addEventListener('pointercancel', baUp);
+    // au clavier : le bouton (visible au focus) fait passer le curseur à 50 %, 100 %, puis 0 %
+    var baBtn = $('.ba-toggle', baSlide);
+    if (baBtn) baBtn.addEventListener('click', function () {
+      var to = ba.pos < 49 ? 50 : ba.pos < 99 ? 100 : 0;
+      baAnimate(to, 700);
+      live.textContent = to === 0 ? 'Today' : to === 50 ? 'Today and tomorrow, side by side' : 'Tomorrow';
+    });
+    baLoad();
+  }
+
+  /* ------------------------------------------------------------------ hologramme 3D (écran 8) */
   var holoSlide = $('.slide-holo'), holoIdx = slides.indexOf(holoSlide);
   var holoStage = $('.holo-stage'), holoHost = $('.holo-canvas'), holoLabel = $('.holo-label'), holoNext = $('.holo-next');
   var HOLO_NAMES = ['Book', 'Timetable', 'Calculator', 'Globe'];
@@ -307,7 +406,7 @@
       .then(function (m) { holo.mod = m; if (cur === holoIdx) holoActivate(true); })
       .catch(function () { holoFail(); });
   }
-  // le rendu WebGL n'est créé qu'une fois l'écran 7 affiché ; ailleurs il n'est plus dessiné
+  // le rendu WebGL n'est créé qu'une fois l'écran 8 affiché ; ailleurs il n'est plus dessiné
   function holoActivate(on) {
     if (holo.failed || !holoStage || !on) return;
     if (!holo.mod) { holoLoad(); return; }
@@ -358,7 +457,133 @@
     setSteps(holoSlide, uniq.filter(function (v) { return v <= shownBefore; }).length);
   }
 
-  /* ------------------------------------------------------------------ chambre interactive (écran 11) */
+  /* ------------------------------------------------------------------ maquette 3D du lycée du futur (écran 9) */
+  // vue d'ensemble, puis un repère par zone (dans l'ordre des écrans suivants) ; clic = envol + vidéo
+  var mapSlide = $('.slide-map'), mapIdx = slides.indexOf(mapSlide);
+  var mapStage = mapSlide ? $('.map-stage', mapSlide) : null, mapHost = mapSlide ? $('.map-canvas', mapSlide) : null;
+  var mapTags = mapSlide ? $$('.map-tag', mapSlide) : [];
+  var mapPanel = mapSlide ? $('.map-panel', mapSlide) : null, mapVideo = mapPanel ? $('.map-video', mapPanel) : null;
+  var mapTitle = mapPanel ? $('.map-panel-title', mapPanel) : null, mapBack = mapPanel ? $('.map-back', mapPanel) : null;
+  var MAP_VIDEOS = ['boarding', 'mall', 'food', 'room', 'walkway'];
+  var map = { mod: null, inst: null, loading: null, flat: false, panel: -1, flying: -1, step: 0, hot: -1, focus: -1, arrive: false, opener: null };
+  function mapName(i) { return mapTags[i] ? mapTags[i].textContent.trim() : ''; }
+  function mapLoad() {
+    if (map.loading || map.flat || !mapStage) return;
+    if (!webglOK()) { mapFlat(); return; }
+    map.loading = import(new URL('assets/js/present-map.js', document.baseURI).href)
+      .then(function (m) { map.mod = m; if (cur === mapIdx) mapActivate(); })
+      .catch(function () { mapFlat(); });
+  }
+  // le rendu WebGL n'est créé qu'une fois l'écran 9 affiché ; ailleurs il n'est plus dessiné
+  function mapActivate() {
+    if (map.flat || !mapStage) return;
+    if (!map.mod) { mapLoad(); return; }
+    if (!map.inst) {
+      try {
+        map.inst = map.mod.createMap(mapHost, { reduced: reduced, onError: mapFlat, onArrive: mapOpenPanel, onPick: mapPick, onHover: mapHover, tags: mapTags });
+        mapSlide.classList.add('map-3d');
+        map.arrive = true; mapApplyStep();
+      } catch (err) { mapFlat(); return; }
+    }
+    map.inst.invalidate();
+    kick();
+  }
+  // secours sans WebGL : plan 2D, les 5 zones en boutons
+  function mapFlat() {
+    if (map.flat || !mapSlide) return;
+    map.flat = true;
+    if (map.inst) { try { map.inst.dispose(); } catch (err) { /* ignoré */ } map.inst = null; }
+    mapSlide.classList.remove('map-3d'); mapSlide.classList.add('map-flat');
+    mapTags.forEach(function (t) { t.style.transform = ''; t.style.zIndex = ''; });
+    if (map.flying >= 0) mapOpenPanel(map.flying);
+    mapSyncTags();
+  }
+  function mapSyncTags() {
+    mapTags.forEach(function (t, i) {
+      t.classList.toggle('is-hot', i === map.hot || i === map.focus || i === map.flying || i === map.panel);
+      t.classList.toggle('is-focus', i === map.focus);
+    });
+  }
+  function mapHover(i) { map.hot = i; if (map.inst) map.inst.hover(i); mapSyncTags(); }
+  function mapApplyStep() {
+    var instant = map.arrive; map.arrive = false;
+    var mark = map.step > 0 ? $('.map-mark[data-step="' + map.step + '"]', mapSlide) : null;
+    map.focus = mark ? +mark.dataset.zone : -1;
+    mapSyncTags();
+    if (!map.inst) return;
+    if (map.focus < 0) map.inst.overview(instant); else map.inst.focus(map.focus);
+  }
+  // clic sur une zone : la caméra s'envole (~1,2 s), puis la vidéo s'ouvre
+  function mapPick(i) {
+    if (map.panel >= 0 || map.flying === i) return;
+    map.opener = mapTags[i];
+    live.textContent = mapName(i);
+    if (!map.inst) { mapOpenPanel(i); return; }
+    map.flying = i;
+    map.inst.fly(i);
+    mapSyncTags();
+    kick();
+  }
+  function mapOpenPanel(i) {
+    if (cur !== mapIdx) return;
+    if (map.inst && map.flying !== i) return;
+    map.flying = -1; map.panel = i;
+    var base = 'assets/video/expo/' + MAP_VIDEOS[i];
+    if (mapVideo.dataset.zone !== String(i)) {
+      mapVideo.dataset.zone = String(i);
+      mapVideo.poster = base + '-poster.webp';
+      mapVideo.innerHTML = '<source src="' + base + '.mp4" type="video/mp4"><source src="' + base + '.webm" type="video/webm">';
+      mapVideo.preload = 'auto';
+      mapVideo.load();
+    }
+    mapTitle.textContent = mapName(i);
+    mapPanel.classList.add('is-open');
+    mapPanel.setAttribute('aria-hidden', 'false');
+    mapPanel.removeAttribute('inert');
+    mapSyncVideo();
+    live.textContent = mapName(i) + ': video';
+    mapSyncTags();
+    try { mapBack.focus({ preventScroll: true }); } catch (err) { mapBack.focus(); }
+  }
+  function mapSyncVideo() {
+    if (!mapVideo) return;
+    var play = map.panel >= 0 && cur === mapIdx && !reduced() && !cfgOpen;
+    mapVideo.controls = map.panel >= 0 && reduced();
+    if (play) { var p = mapVideo.play(); if (p && p.catch) p.catch(function () { /* l'affiche reste */ }); }
+    else if (!mapVideo.paused) mapVideo.pause();
+  }
+  // « Back to the map » / Échap : ferme la vidéo et ramène la caméra en vue d'ensemble
+  function mapClosePanel(instant) {
+    if (!mapPanel || (map.panel < 0 && map.flying < 0)) return false;
+    var hadFocus = mapPanel.contains(document.activeElement);
+    map.panel = -1; map.flying = -1;
+    mapPanel.classList.remove('is-open');
+    mapPanel.setAttribute('aria-hidden', 'true');
+    mapPanel.setAttribute('inert', '');
+    mapSyncVideo();
+    if (map.inst) { if (map.focus >= 0) map.inst.focus(map.focus); else map.inst.overview(instant); }
+    mapSyncTags();
+    if (!instant) live.textContent = 'Back to the map';
+    if (hadFocus && map.opener && !instant) map.opener.focus({ preventScroll: true });
+    kick();
+    return true;
+  }
+  if (mapSlide) {
+    mapPanel.setAttribute('inert', '');
+    mapSlide._onSteps = function (n) { map.step = n; if (map.panel >= 0 || map.flying >= 0) mapClosePanel(true); mapApplyStep(); };
+    mapTags.forEach(function (t, i) {
+      t.addEventListener('click', function () { mapPick(i); });
+      t.addEventListener('mouseenter', function () { mapHover(i); });
+      t.addEventListener('mouseleave', function () { if (map.hot === i) mapHover(-1); });
+      t.addEventListener('focus', function () { mapHover(i); });
+      t.addEventListener('blur', function () { if (map.hot === i) mapHover(-1); });
+    });
+    mapBack.addEventListener('click', function () { mapClosePanel(false); });
+    // clic sur le fond sombre autour de la vidéo : retour à la carte
+    mapPanel.addEventListener('click', function (e) { if (e.target === mapPanel) mapClosePanel(false); });
+  }
+
+  /* ------------------------------------------------------------------ chambre interactive (écran 13) */
   var roomSlide = $('.slide-room'), roomIdx = slides.indexOf(roomSlide);
   var roomMedia = roomSlide ? $('.media', roomSlide) : null;
   var roomSweep = roomSlide ? $('.room-sweep', roomSlide) : null;
@@ -500,6 +725,9 @@
       s._transT = setTimeout(function () { s.classList.remove('is-entering'); }, TRANS_MS);
     }
     if (old !== s) clearUnis();
+    if (old === mapSlide && old !== s) { mapClosePanel(true); mapHover(-1); }
+    if (s === baSlide && old !== s) ba.instant = true;
+    if (s === mapSlide && old !== s) map.arrive = true;
     cur = n;
     // en revenant en arrière, l'écran s'affiche avec tous ses repères
     setSteps(s, back && opts.allSteps !== false ? s._steps : 0);
@@ -523,18 +751,24 @@
     // configurateur préparé dès l'écran « In 3D » ; module de l'hologramme chargé à l'avance
     if (s.classList.contains('slide-3d')) { prepareConfig(); holoLoad(); }
     holoActivate(n === holoIdx);
+    // maquette : module chargé dès l'écran précédent, rendu créé à l'arrivée
+    if (n === mapIdx - 1 || n === mapIdx) mapLoad();
+    if (n === mapIdx) mapActivate();
+    if (s === baSlide) ba.instant = false;
     if (n === roomIdx || n === roomIdx - 1) probeRoom();
     syncVideos();
     kick();
   }
   function next() {
     if (intro.on) { endIntro(); return; }
+    if (cur === mapIdx && mapClosePanel(false)) return; // vidéo ouverte : d'abord retour à la carte
     var s = slides[cur];
     if (s._shown < s._steps) { setSteps(s, s._shown + 1); announceStep(s); prevBtn.disabled = false; return; }
     go(cur + 1);
   }
   function prev() {
     if (intro.on) { endIntro(); return; }
+    if (cur === mapIdx && mapClosePanel(false)) return;
     var s = slides[cur];
     if (s._shown > 0) { setSteps(s, s._shown - 1); prevBtn.disabled = cur === 0 && s._shown === 0; return; }
     go(cur - 1);
@@ -567,12 +801,14 @@
       case 'Home': go(0); e.preventDefault(); break;
       case 'End': go(total - 1); e.preventDefault(); break;
       case 'f': case 'F': toggleFullscreen(); e.preventDefault(); break;
-      case 'Escape': location.href = 'index.html'; break;
+      case 'Escape':
+        if (cur === mapIdx && mapClosePanel(false)) { e.preventDefault(); break; }
+        location.href = 'index.html'; break;
     }
   });
 
   /* clic / appui : à gauche = précédent, à droite = suivant ; balayage sur tactile */
-  var NO_NAV = 'button, a, input, select, textarea, label, .holo-stage, .uni';
+  var NO_NAV = 'button, a, input, select, textarea, label, .holo-stage, .uni, .ba, .map-stage, .map-panel';
   var touch = null, swiped = false;
   deck.addEventListener('click', function (e) {
     if (swiped) { swiped = false; return; }
@@ -581,7 +817,7 @@
     if (e.clientX < window.innerWidth * 0.35) prev(); else next();
   });
   deck.addEventListener('touchstart', function (e) {
-    if (e.touches.length !== 1 || (e.target.closest && e.target.closest('.holo-stage'))) { touch = null; return; }
+    if (e.touches.length !== 1 || (e.target.closest && e.target.closest('.holo-stage, .slide-ba.ba-ready .ba, .map-stage, .map-panel'))) { touch = null; return; }
     touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, { passive: true });
   deck.addEventListener('touchend', function (e) {
@@ -639,6 +875,9 @@
       if (holo.inst) { var w = holo.want; holo.inst.show(-1, true); holo.inst.show(w, true); }
     } else fxAttach(slides[cur]);
     if (holo.inst) holo.inst.invalidate();
+    if (map.inst) map.inst.invalidate();
+    if (r && ba.dur) { baSet(ba.to === 100 ? 50 : ba.to); baEnd(); }
+    mapSyncVideo();
     syncVideos();
     kick();
   });
@@ -693,6 +932,7 @@
     live.textContent = '3D configurator opened';
     syncParallaxClass();
     syncVideos();
+    mapSyncVideo();
     backBtn.focus();
     if (cfgReady) immerse();
   }
