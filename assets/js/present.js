@@ -103,6 +103,7 @@
       if (!v || v.closest('.video-failed')) return;
       // chambre : la vidéo de base s'arrête quand une variante la recouvre
       var covered = s === roomSlide && room.layer && room.layerSettled;
+      if (s === mapSlide && map.panel >= 0) covered = true; // plan : la vidéo de drone s'arrête sous le panneau vidéo
       if (i === cur && !reduced() && !cfgOpen && !covered) playVideo(v);
       else {
         if (!v.paused) v.pause();
@@ -457,8 +458,10 @@
     setSteps(holoSlide, uniq.filter(function (v) { return v <= shownBefore; }).length);
   }
 
-  /* ------------------------------------------------------------------ maquette 3D du lycée du futur (écran 9) */
-  // vue d'ensemble, puis un repère par zone (dans l'ordre des écrans suivants) ; clic = envol + vidéo
+  /* ------------------------------------------------------------------ plan du campus (écran 9) */
+  // vue aérienne photoréaliste (image + vidéo de drone) ; vue d'ensemble, puis un repère par zone
+  // (dans l'ordre des écrans suivants) : la zone s'allume et la caméra s'en approche ; clic = plongée + vidéo de la zone.
+  // Secours : maquette three.js (present-map.js) si l'image du campus manque, puis plan 2D sans WebGL.
   var mapSlide = $('.slide-map'), mapIdx = slides.indexOf(mapSlide);
   var mapStage = mapSlide ? $('.map-stage', mapSlide) : null, mapHost = mapSlide ? $('.map-canvas', mapSlide) : null;
   var mapTags = mapSlide ? $$('.map-tag', mapSlide) : [];
@@ -466,18 +469,45 @@
   var mapTitle = mapPanel ? $('.map-panel-title', mapPanel) : null, mapBack = mapPanel ? $('.map-back', mapPanel) : null;
   var MAP_VIDEOS = ['boarding', 'mall', 'food', 'room', 'walkway'];
   var map = { mod: null, inst: null, loading: null, flat: false, panel: -1, flying: -1, step: 0, hot: -1, focus: -1, arrive: false, opener: null };
+  var campusMedia = mapSlide ? $('.media.campus', mapSlide) : null;
+  var campus = { ok: campusMedia ? null : false, probing: false };
   function mapName(i) { return mapTags[i] ? mapTags[i].textContent.trim() : ''; }
+  // image du campus : chargée dès l'écran précédent ; si elle manque, on passe à la maquette three.js
+  function campusProbe() {
+    if (campus.probing || campus.ok !== null) return;
+    campus.probing = true;
+    loadImg(campusMedia.dataset.campus, campusMedia.dataset.alt).then(function (img) {
+      var frameEl = $('.campus-frame', campusMedia);
+      frameEl.insertBefore(img, frameEl.firstChild);
+      campusMedia.classList.add('has-img');
+      campus.ok = true;
+      if (cur === mapIdx) mapActivate();
+    }).catch(function () {
+      campus.ok = false;
+      campusMedia.remove(); campusMedia = null;
+      mapSlide._hasMedia = false; mapSlide._video = null; mapSlide.classList.remove('has-media');
+      if (cur === mapIdx) body.classList.remove('film-on');
+      mapLoad();
+    });
+  }
   function mapLoad() {
     if (map.loading || map.flat || !mapStage) return;
+    if (campus.ok !== false) { campusProbe(); return; }
     if (!webglOK()) { mapFlat(); return; }
     map.loading = import(new URL('assets/js/present-map.js', document.baseURI).href)
       .then(function (m) { map.mod = m; if (cur === mapIdx) mapActivate(); })
       .catch(function () { mapFlat(); });
   }
-  // le rendu WebGL n'est créé qu'une fois l'écran 9 affiché ; ailleurs il n'est plus dessiné
+  // le rendu n'est créé qu'une fois l'écran 9 affiché ; ailleurs il n'est plus dessiné
   function mapActivate() {
     if (map.flat || !mapStage) return;
-    if (!map.mod) { mapLoad(); return; }
+    if (campus.ok === null) { campusProbe(); return; }
+    if (!map.inst && campus.ok) {
+      map.inst = createCampus();
+      mapSlide.classList.add('map-campus');
+      map.arrive = true; mapApplyStep();
+    }
+    if (!map.inst && !map.mod) { mapLoad(); return; }
     if (!map.inst) {
       try {
         map.inst = map.mod.createMap(mapHost, { reduced: reduced, onError: mapFlat, onArrive: mapOpenPanel, onPick: mapPick, onHover: mapHover, tags: mapTags });
@@ -488,13 +518,184 @@
     map.inst.invalidate();
     kick();
   }
+
+  // ---- caméra du plan photo : même interface que la maquette three.js (overview, focus, fly, hover, render…)
+  // Positions en fractions de l'image 16:9 (planche de vérification : build/ai/expo/campus/planche.png).
+  // x, y : pied du marqueur sur le bâtiment ; cx, cy, rx, ry : centre et demi-axes du halo autour du bâtiment.
+  var CAMPUS_ZONES = [
+    { x: 0.22, y: 0.292, cx: 0.222, cy: 0.255, rx: 0.185, ry: 0.105 }, // Boarding : l'aile internat (balcons), en haut à gauche
+    { x: 0.85, y: 0.66, cx: 0.85, cy: 0.735, rx: 0.15, ry: 0.17 },      // Shopping : la galerie vitrée ronde, en bas à droite
+    { x: 0.255, y: 0.75, cx: 0.17, cy: 0.765, rx: 0.19, ry: 0.17 },     // Restaurants : la terrasse aux parasols, en bas à gauche
+    { x: 0.765, y: 0.225, cx: 0.765, cy: 0.24, rx: 0.135, ry: 0.1 },    // Rooms : le bloc de chambres cubes, en haut à droite
+    { x: 0.21, y: 0.485, cx: 0.2, cy: 0.505, rx: 0.21, ry: 0.075 }      // Walkways : la passerelle vitrée, à gauche
+  ];
+  // mouvement de la vidéo de drone (boucle aller-retour, légère poussée vers l'avant) : 25 instants régulièrement espacés
+  // sur sa durée, chacun [s, x0, y0, … x4, y4] = zoom de l'image et position du pied de chaque marqueur (fractions).
+  // Mesuré sur la vidéo par build/ai/expo/campus/track.py — les marqueurs et les halos suivent les bâtiments.
+  var CAMPUS_TRACK = [
+    [1.0037,0.219,0.2911,0.851,0.6611,0.2536,0.7514,0.7652,0.2239,0.2086,0.4851],
+    [1.0063,0.2185,0.2909,0.8519,0.6621,0.2529,0.7528,0.7655,0.2236,0.2078,0.4854],
+    [1.0108,0.2177,0.2905,0.8535,0.6641,0.2515,0.7552,0.7661,0.2229,0.2065,0.4862],
+    [1.0154,0.2168,0.2903,0.8551,0.6662,0.2502,0.7578,0.7666,0.2225,0.2051,0.4871],
+    [1.0217,0.2157,0.29,0.8574,0.6692,0.2484,0.7613,0.7675,0.2218,0.2033,0.4883],
+    [1.0286,0.2144,0.2895,0.8599,0.6723,0.2464,0.7652,0.7684,0.221,0.2013,0.4895],
+    [1.0364,0.2132,0.2895,0.8629,0.6763,0.2443,0.77,0.7695,0.2206,0.1992,0.4914],
+    [1.0356,0.213,0.288,0.8622,0.6744,0.2442,0.7679,0.769,0.2191,0.199,0.4897],
+    [1.04,0.2118,0.288,0.8635,0.6767,0.2426,0.7707,0.7693,0.2189,0.1974,0.4908],
+    [1.0467,0.2109,0.2876,0.8661,0.6797,0.2409,0.7744,0.7704,0.2181,0.1957,0.492],
+    [1.0466,0.2106,0.288,0.8658,0.6801,0.2407,0.7747,0.7702,0.2185,0.1955,0.4924],
+    [1.0498,0.2108,0.2882,0.8677,0.6819,0.2405,0.7769,0.7713,0.2186,0.1953,0.4934],
+    [1.0508,0.21,0.2879,0.8675,0.6822,0.2397,0.7772,0.7709,0.2183,0.1944,0.4934],
+    [1.0544,0.2096,0.2874,0.869,0.6836,0.2389,0.779,0.7716,0.2176,0.1936,0.4937],
+    [1.0461,0.2107,0.2878,0.8656,0.6796,0.2408,0.7742,0.7701,0.2183,0.1956,0.492],
+    [1.0468,0.2108,0.2872,0.8661,0.6793,0.2409,0.774,0.7704,0.2177,0.1957,0.4916],
+    [1.0401,0.2118,0.288,0.8635,0.6767,0.2426,0.7707,0.7693,0.2189,0.1974,0.4908],
+    [1.0356,0.2129,0.288,0.8622,0.6744,0.2442,0.7679,0.7691,0.2191,0.199,0.4897],
+    [1.0365,0.2132,0.2895,0.8629,0.6764,0.2443,0.77,0.7696,0.2206,0.1991,0.4915],
+    [1.0286,0.2144,0.2895,0.8599,0.6723,0.2464,0.7652,0.7684,0.221,0.2013,0.4895],
+    [1.0217,0.2157,0.29,0.8574,0.6692,0.2484,0.7613,0.7675,0.2218,0.2033,0.4883],
+    [1.0154,0.2168,0.2903,0.8551,0.6662,0.2502,0.7578,0.7666,0.2225,0.2051,0.4871],
+    [1.0106,0.2177,0.2906,0.8534,0.664,0.2516,0.7551,0.766,0.223,0.2065,0.4862],
+    [1.0062,0.2186,0.2909,0.8519,0.6621,0.2529,0.7527,0.7655,0.2236,0.2079,0.4854],
+    [1.0037,0.219,0.2911,0.851,0.6611,0.2536,0.7514,0.7652,0.2239,0.2086,0.4851]
+  ];
+  var CAMPUS_ASPECT = 16 / 9;
+  function createCampus() {
+    var media = campusMedia, cam = $('.campus-cam', media), frameEl = $('.campus-frame', media);
+    var spot = $('.campus-spot', media), ring = $('.campus-ring', media), video = $('.campus-video', media);
+    var title = $('.map-head .slide-h', mapSlide), titleRange = document.createRange();
+    var st = { w: 0, h: 0, fw: 0, fh: 0, fl: 0, ft: 0, v: { z: 1, x: 0, y: 0, b: 0 }, from: null, to: null, t0: 0, dur: 0,
+      arrive: -1, hover: -1, focus: -1, fly: -1, dirty: true };
+    function ease(u) { return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; }
+    // instant de la vidéo de drone (ligne de CAMPUS_TRACK interpolée), ou null si l'image fixe est affichée
+    function drift() {
+      if (!CAMPUS_TRACK || !video || media.classList.contains('video-failed') || !video.duration || reduced()) return null;
+      var n = CAMPUS_TRACK.length - 1, u = Math.max(0, Math.min(1, video.currentTime / video.duration)) * n;
+      var k = Math.min(n - 1, Math.floor(u)), a = u - k, p = CAMPUS_TRACK[k], q = CAMPUS_TRACK[k + 1];
+      return p.map(function (v, j) { return v + (q[j] - v) * a; });
+    }
+    // pied du marqueur de la zone i, et un point (x, y) du bâtiment de cette zone (halo), dans l'image affichée
+    function foot(i, d) { var z = CAMPUS_ZONES[i]; return d ? [d[1 + 2 * i], d[2 + 2 * i]] : [z.x, z.y]; }
+    function at(i, x, y, d) {
+      var z = CAMPUS_ZONES[i], f = foot(i, d), s = d ? d[0] : 1;
+      return [f[0] + (x - z.x) * s, f[1] + (y - z.y) * s];
+    }
+    // cadre « cover » : l'image 16:9 remplit l'écran, centrée (comme object-fit: cover)
+    function layout() {
+      var w = media.clientWidth, h = media.clientHeight;
+      if (w === st.w && h === st.h) return false;
+      st.w = w; st.h = h;
+      if (w / h > CAMPUS_ASPECT) { st.fw = w; st.fh = w / CAMPUS_ASPECT; } else { st.fh = h; st.fw = h * CAMPUS_ASPECT; }
+      st.fl = (w - st.fw) / 2; st.ft = (h - st.fh) / 2;
+      frameEl.style.cssText = 'left:' + st.fl + 'px;top:' + st.ft + 'px;width:' + st.fw + 'px;height:' + st.fh + 'px';
+      return true;
+    }
+    // vue qui rapproche la zone i (zoom z) et l'amène en partie (k) vers le centre, sans jamais montrer de bord vide
+    function viewFor(i, z, k) {
+      var c = CAMPUS_ZONES[i], p = at(i, c.cx, c.cy, drift()), px = st.fl + p[0] * st.fw, py = st.ft + p[1] * st.fh;
+      var qx = px + (st.w / 2 - px) * k, qy = py + (st.h * 0.56 - py) * k;
+      return { z: z, x: Math.min(0, Math.max(st.w - z * st.w, qx - z * px)), y: Math.min(0, Math.max(st.h - z * st.h, qy - z * py)), b: 0 };
+    }
+    function targetView() {
+      if (reduced() || !st.w) return { z: 1, x: 0, y: 0, b: 0 };
+      if (st.fly >= 0) return viewFor(st.fly, 2, 0.8);
+      if (st.focus >= 0) return viewFor(st.focus, 1.25, 0.45);
+      return { z: 1, x: 0, y: 0, b: 0 };
+    }
+    function retarget(dur) {
+      st.from = { z: st.v.z, x: st.v.x, y: st.v.y, b: st.v.b }; st.to = null;
+      st.t0 = 0; st.dur = reduced() ? 0 : dur; st.moving = true; st.dirty = true;
+      kick();
+    }
+    function sync() {
+      var lit = st.fly >= 0 ? st.fly : st.focus;
+      mapSlide.classList.toggle('is-diving', st.fly >= 0);
+      mapSlide.classList.toggle('has-focus', lit >= 0);
+      spot.classList.toggle('is-on', lit >= 0);
+      ring.classList.toggle('is-on', (lit >= 0 ? lit : st.hover) >= 0);
+      st.dirty = true;
+      kick();
+    }
+    function apply() {
+      cam.style.transform = 'translate(' + st.v.x.toFixed(2) + 'px,' + st.v.y.toFixed(2) + 'px) scale(' + st.v.z.toFixed(4) + ')';
+      cam.style.filter = st.v.b > 0.05 ? 'blur(' + st.v.b.toFixed(2) + 'px)' : '';
+    }
+    function place(d) {
+      // halo et assombrissement autour de la zone : en fractions du cadre (ils zooment avec l'image)
+      var lit = st.fly >= 0 ? st.fly : st.focus, zi = lit >= 0 ? lit : st.hover;
+      if (zi >= 0) {
+        var z = CAMPUS_ZONES[zi], c = at(zi, z.cx, z.cy, d), sc0 = d ? d[0] : 1;
+        ring.style.left = (c[0] * 100) + '%'; ring.style.top = (c[1] * 100) + '%';
+        ring.style.width = (z.rx * 200 * sc0) + '%'; ring.style.height = (z.ry * 200 * sc0) + '%';
+      }
+      if (lit >= 0) {
+        var s = CAMPUS_ZONES[lit], cs = at(lit, s.cx, s.cy, d);
+        spot.style.background = 'radial-gradient(ellipse ' + (s.rx * 150) + '% ' + (s.ry * 150) + '% at ' + (cs[0] * 100).toFixed(2) + '% ' + (cs[1] * 100).toFixed(2) + '%, rgba(3, 10, 32, 0) 55%, rgba(3, 10, 32, .5) 100%)';
+      }
+      // marqueurs : projetés à l'écran à partir du cadre réellement affiché (zoom, parallaxe, transition comprises)
+      var sr = mapSlide.getBoundingClientRect(), fr = frameEl.getBoundingClientRect();
+      var k = sr.width / (mapSlide.offsetWidth || 1) || 1;
+      // le titre ne cache aucun marqueur : une étiquette qui le toucherait passe sous son point
+      titleRange.selectNodeContents(title);
+      var tr = titleRange.getBoundingClientRect(), stem = Math.max(26, Math.min(46, window.innerHeight * 0.036)) + 6;
+      var tl = (tr.left - sr.left) / k - 12, tt = (tr.top - sr.top) / k - 12, trr = (tr.right - sr.left) / k + 12, tb = (tr.bottom - sr.top) / k + 12;
+      mapTags.forEach(function (t, i) {
+        var p = foot(i, d);
+        var x = (fr.left - sr.left + p[0] * fr.width) / k, y = (fr.top - sr.top + p[1] * fr.height) / k;
+        var sc = t.classList.contains('is-focus') ? 1.22 : 1, hw = t.offsetWidth / 2 * sc, top = y - (stem + t.offsetHeight) * sc;
+        t.classList.toggle('is-below', x + hw > tl && x - hw < trr && top < tb && y > tt);
+        t.style.translate = x.toFixed(1) + 'px ' + y.toFixed(1) + 'px';
+        t.style.zIndex = (i === st.focus || i === st.fly) ? 3 : i === st.hover ? 2 : '';
+      });
+    }
+    function onResize() { st.w = 0; st.dirty = true; kick(); }
+    window.addEventListener('resize', onResize);
+    return {
+      overview: function (instant) { st.focus = -1; st.fly = -1; st.arrive = -1; sync(); retarget(instant ? 0 : 1100); },
+      focus: function (i) { st.focus = i; st.fly = -1; st.arrive = -1; sync(); retarget(1300); },
+      // plongée (~1,1 s, léger flou de mouvement), puis la vidéo de la zone s'ouvre
+      fly: function (i) {
+        st.fly = i; sync();
+        if (reduced()) { mapOpenPanel(i); return; }
+        st.arrive = i; retarget(1100);
+      },
+      hover: function (i) { st.hover = i; sync(); },
+      invalidate: function () { st.w = 0; st.dirty = true; },
+      render: function (t) {
+        var resized = layout(), d = drift(), anim = false;
+        if (st.moving) {
+          if (!st.t0) st.t0 = t;
+          var u = st.dur ? Math.min(1, (t - st.t0) / st.dur) : 1, e = ease(u), f = st.from, g = targetView();
+          st.v = { z: f.z + (g.z - f.z) * e, x: f.x + (g.x - f.x) * e, y: f.y + (g.y - f.y) * e, b: st.fly >= 0 && u < 1 ? Math.sin(Math.PI * u) * 2.2 : 0 };
+          if (u < 1) anim = true;
+          else {
+            st.moving = false;
+            if (st.arrive >= 0) { var a = st.arrive; st.arrive = -1; mapOpenPanel(a); }
+          }
+          apply();
+        } else if (resized || (d && (st.focus >= 0 || st.fly >= 0))) {
+          // taille changée, ou zone rapprochée pendant la vidéo : la vue reste calée sur le bâtiment
+          st.v = targetView(); apply();
+        }
+        place(d);
+        st.dirty = false;
+        return anim || !!(video && !video.paused && !media.classList.contains('video-failed'));
+      },
+      dispose: function () {
+        window.removeEventListener('resize', onResize);
+        cam.style.transform = ''; cam.style.filter = '';
+        mapTags.forEach(function (t) { t.style.translate = ''; t.style.zIndex = ''; t.classList.remove('is-below'); });
+        mapSlide.classList.remove('map-campus', 'is-diving', 'has-focus');
+      }
+    };
+  }
   // secours sans WebGL : plan 2D, les 5 zones en boutons
   function mapFlat() {
     if (map.flat || !mapSlide) return;
     map.flat = true;
     if (map.inst) { try { map.inst.dispose(); } catch (err) { /* ignoré */ } map.inst = null; }
     mapSlide.classList.remove('map-3d'); mapSlide.classList.add('map-flat');
-    mapTags.forEach(function (t) { t.style.transform = ''; t.style.zIndex = ''; });
+    mapTags.forEach(function (t) { t.style.transform = ''; t.style.translate = ''; t.style.zIndex = ''; });
     if (map.flying >= 0) mapOpenPanel(map.flying);
     mapSyncTags();
   }
@@ -551,6 +752,7 @@
     mapVideo.controls = map.panel >= 0 && reduced();
     if (play) { var p = mapVideo.play(); if (p && p.catch) p.catch(function () { /* l'affiche reste */ }); }
     else if (!mapVideo.paused) mapVideo.pause();
+    syncVideos();
   }
   // « Back to the map » / Échap : ferme la vidéo et ramène la caméra en vue d'ensemble
   function mapClosePanel(instant) {

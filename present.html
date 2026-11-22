@@ -193,9 +193,22 @@
     </div>
   </section>
 
-  <!-- 9 · Map : maquette 3D du lycée du futur (three.js, present-map.js) — introduction de la partie 2 -->
-  <!-- repères : vue d'ensemble, puis chaque appui allume et pointe une zone (Boarding → Walkways), sans ouvrir la vidéo -->
+  <!-- 9 · Map : vue aérienne (drone) du campus du lycée du futur — introduction de la partie 2 -->
+  <!-- repères : vue d'ensemble, puis chaque appui allume une zone et la caméra s'en approche (Boarding → Walkways), sans ouvrir la vidéo -->
+  <!-- secours : maquette three.js (present-map.js) si l'image du campus manque, puis plan 2D sans WebGL -->
   <section class="slide slide-map plain" data-title="Welcome to our school" data-part="Part 2">
+    <div class="media campus" data-campus="assets/img/expo/campus" data-alt="Aerial drone view of the campus of our school of the future.">
+      <div class="campus-cam">
+        <div class="campus-frame">
+          <video class="bg-video campus-video" data-video muted loop playsinline preload="metadata" poster="assets/video/expo/campus-poster.webp" aria-hidden="true" tabindex="-1">
+            <source src="assets/video/expo/campus.mp4" type="video/mp4">
+            <source src="assets/video/expo/campus.webm" type="video/webm">
+          </video>
+          <div class="campus-spot" aria-hidden="true"></div>
+          <span class="campus-ring" aria-hidden="true"></span>
+        </div>
+      </div>
+    </div>
     <div class="map-stage">
       <div class="map-canvas"></div>
       <div class="map-plan" aria-hidden="true"><span class="mp b1"></span><span class="mp b2"></span><span class="mp b3"></span><span class="mp b4"></span><span class="mp b5"></span><span class="mp yard"></span></div>

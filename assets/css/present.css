@@ -297,6 +297,38 @@ html.px-on .slide.is-active .media img { animation: none; }
 .mp.b4 { left: 66%; top: 12%; width: 18%; height: 22%; box-shadow: 0 0 0 2px rgba(143, 92, 255, .9), 0 0 24px rgba(103, 45, 255, .5); }
 .mp.b5 { left: 12%; top: 43%; width: 76%; height: 7%; border-radius: 4px; background: repeating-linear-gradient(90deg, rgba(43, 184, 255, .9) 0 14px, rgba(143, 92, 255, .5) 14px 30px); }
 .mp.yard { left: 39%; top: 55%; width: 22%; aspect-ratio: 1; height: auto; border-radius: 50%; background: rgba(23, 50, 122, .9); box-shadow: 0 0 0 2px rgba(143, 92, 255, .8); }
+/* plan photo du campus (vue de drone) : image + vidéo en « cover » (cadre calculé en JS), caméra = transform en JS */
+.campus-cam { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.campus-frame { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.campus-frame > img, .campus-frame > .bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: none !important; }
+.slide-map:not(.map-campus) .media.campus { visibility: hidden; }
+/* zone au premier plan : le reste s'assombrit un peu, un halo lumineux entoure le bâtiment */
+.campus-spot { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .9s ease; }
+.campus-spot.is-on { opacity: 1; }
+.campus-ring { position: absolute; left: 50%; top: 50%; width: 0; height: 0; translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .6s ease;
+  border: 2px solid rgba(143, 216, 255, .85); box-shadow: 0 0 22px 4px rgba(24, 185, 255, .55), inset 0 0 40px 6px rgba(103, 45, 255, .35); background: radial-gradient(ellipse at center, rgba(120, 200, 255, .12), rgba(120, 200, 255, 0) 70%); }
+.campus-ring.is-on { opacity: 1; animation: ringGlow 2.4s ease-in-out infinite; }
+@keyframes ringGlow { 50% { box-shadow: 0 0 34px 8px rgba(103, 45, 255, .6), inset 0 0 50px 10px rgba(24, 185, 255, .35); border-color: rgba(190, 160, 255, .9); } }
+/* marqueurs : point pulsant bleu-violet, trait vertical fin, étiquette en verre dépoli.
+   Le pied (le point) est posé sur le bâtiment : JS -> translate (position), CSS -> transform (décalage), scale autour du pied */
+.map-campus .map-tag { --stem: clamp(26px, 3.6vh, 46px); opacity: 1; visibility: visible; transform-origin: 0 0; transform: translate(-50%, calc(-100% - var(--stem) - 6px));
+  background: rgba(10, 26, 66, .42); border-color: rgba(200, 230, 255, .5); backdrop-filter: blur(12px) saturate(1.5); -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .25); text-shadow: 0 1px 6px rgba(2, 9, 38, .6); }
+.map-campus .map-tag::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: var(--stem); margin-left: -1px; background: linear-gradient(to bottom, rgba(220, 240, 255, .95), rgba(143, 216, 255, .35)); box-shadow: 0 0 6px rgba(24, 185, 255, .7); pointer-events: none; }
+.map-campus .map-tag::before { content: ""; position: absolute; left: 50%; top: calc(100% + var(--stem) + 6px); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #fff 0 18%, #5fd0ff 40%, #6a3cff 100%); box-shadow: 0 0 0 0 rgba(24, 185, 255, .7), 0 0 12px 2px rgba(103, 45, 255, .8); pointer-events: none; animation: pinPulse 2s ease-out infinite; }
+@keyframes pinPulse { 0% { box-shadow: 0 0 0 0 rgba(24, 185, 255, .75), 0 0 12px 2px rgba(103, 45, 255, .8); } 70% { box-shadow: 0 0 0 16px rgba(103, 45, 255, 0), 0 0 12px 2px rgba(103, 45, 255, .8); } 100% { box-shadow: 0 0 0 0 rgba(103, 45, 255, 0), 0 0 12px 2px rgba(103, 45, 255, .8); } }
+/* étiquette sous son point (si elle toucherait le titre) */
+.map-campus .map-tag.is-below { transform: translate(-50%, calc(var(--stem) + 6px)); }
+.map-campus .map-tag.is-below::after { top: auto; bottom: 100%; background: linear-gradient(to top, rgba(220, 240, 255, .95), rgba(143, 216, 255, .35)); }
+.map-campus .map-tag.is-below::before { top: calc(-1 * (var(--stem) + 6px)); }
+.map-campus .map-tag:hover, .map-campus .map-tag.is-hot { background: linear-gradient(100deg, rgba(19, 185, 255, .55), rgba(74, 46, 224, .6)); border-color: rgba(255, 255, 255, .85); box-shadow: 0 8px 28px rgba(0, 0, 0, .4), 0 0 26px rgba(8, 125, 255, .7); }
+.map-campus .map-tag.is-focus { scale: 1.22; }
+.map-campus.has-focus .map-tag:not(.is-focus):not(.is-hot) { opacity: .6; }
+.map-campus.is-diving .map-tag:not(.is-hot) { opacity: 0; }
+.map-campus .map-tag:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+/* titre : plus compact sur le plan, pour ne cacher aucun marqueur */
+.map-campus .map-head { align-items: center; text-align: center; }
+.map-campus .map-head .slide-h { font-size: clamp(1.8rem, 3.6vw, 3.8rem); }
 /* panneau vidéo de la zone */
 .map-panel { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: calc(var(--banner-h) + 24px) var(--gutter) 70px; background: rgba(3, 9, 30, .62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; }
 .map-panel.is-open { opacity: 1; visibility: visible; transition: opacity .6s ease, visibility 0s; }
