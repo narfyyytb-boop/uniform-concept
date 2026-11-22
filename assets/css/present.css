@@ -16,23 +16,25 @@
 .slide.is-entering { animation: camIn .72s cubic-bezier(.3, .45, .3, 1) both; }
 .deck.go-back .slide.is-leaving { animation-name: camOutBack; }
 .deck.go-back .slide.is-entering { animation-name: camInBack; }
-@keyframes camOut { from { opacity: 1; transform: none; filter: blur(0); } 80% { opacity: 0; } to { opacity: 0; transform: scale(1.14); filter: blur(7px); } }
+@keyframes camOut { from { opacity: 1; transform: none; filter: none; } 80% { opacity: 0; } to { opacity: 0; transform: scale(1.14); filter: blur(7px); } }
 @keyframes camIn { from { opacity: 0; transform: scale(.92); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
-@keyframes camOutBack { from { opacity: 1; transform: none; filter: blur(0); } 80% { opacity: 0; } to { opacity: 0; transform: scale(.9); filter: blur(6px); } }
+@keyframes camOutBack { from { opacity: 1; transform: none; filter: none; } 80% { opacity: 0; } to { opacity: 0; transform: scale(.9); filter: blur(6px); } }
 @keyframes camInBack { from { opacity: 0; transform: scale(1.1); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
 .slide.plain { background: radial-gradient(ellipse 75% 70% at 50% 40%, #1c3c97 0%, #10296b 38%, #0a1d4e 62%, var(--night) 88%); }
 
 /* image de fond + secours */
-.page-present { --grade: saturate(.82) contrast(.94) sepia(.08) brightness(1.02); }
+/* étalonnage léger, sans flou ni baisse de contraste (l'image reste nette et dense au vidéoprojecteur) */
+.page-present { --grade: saturate(.92) sepia(.04); }
 .media { position: absolute; inset: 0; overflow: hidden; background: var(--night); }
 /* étalonnage « film » : images IA un peu moins saturées, un peu plus chaudes */
-.media > img, .media video { filter: var(--grade); }
+.media > img, .media video { filter: var(--grade); backface-visibility: hidden; }
 /* parallaxe : le décor part à l'opposé de la souris, le texte un peu dans l'autre sens */
-html.px-on .slide.has-media .media { translate: calc(var(--px, 0) * -14px) calc(var(--py, 0) * -9px); scale: 1.055; }
-html.px-on .slide.has-media .content, html.px-on .slide.has-media .holo-stage { translate: calc(var(--px, 0) * 7px) calc(var(--py, 0) * 4px); }
+/* zoom minimal (1,025) : juste de quoi cacher les bords pendant le déplacement, pour ne pas agrandir l'image */
+html.px-on .slide.has-media .media { translate: calc(var(--px, 0) * -6px) calc(var(--py, 0) * -4px); scale: 1.025; backface-visibility: hidden; }
+html.px-on .slide.has-media .content, html.px-on .slide.has-media .holo-stage { translate: calc(var(--px, 0) * 4px) calc(var(--py, 0) * 2px); }
 .fx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: screen; }
 .slide > .fx-canvas { z-index: 1; opacity: .9; }
-html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -14px) calc(var(--py, 0) * -9px); scale: 1.055; }
+html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -6px) calc(var(--py, 0) * -4px); scale: 1.025; }
 .media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 60% 45%; }
 .media .fallback { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .8s;
   background: radial-gradient(circle at 78% 24%, rgba(103, 45, 255, .55), transparent 46%), radial-gradient(circle at 20% 70%, rgba(8, 125, 255, .5), transparent 50%), linear-gradient(135deg, #061638 0%, #0b2263 45%, #2a1a8c 100%); }
@@ -41,7 +43,9 @@ html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -14px)
 .media.has-img .fallback { opacity: 0; }
 .slide.is-active .media img { animation: kenburns 20s ease-out both; }
 .slide.is-active .fb-ico { animation: fbFloat 7s ease-in-out infinite; }
-@keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translate(-1.2%, -.8%); } }
+/* Ken Burns discret, et rien quand la parallaxe bouge déjà le décor */
+html.px-on .slide.is-active .media img { animation: none; }
+@keyframes kenburns { from { transform: scale(1); } to { transform: scale(1.04) translate(-.5%, -.35%); } }
 @keyframes fbFloat { 0%, 100% { transform: translate(18%, -12%); } 50% { transform: translate(18%, -16%) scale(1.03); } }
 .slide-title .media img { object-position: 30% 100%; }
 /* vidéo de fond en boucle (par-dessus l'image, qui reste en secours) : pas d'effet Ken Burns ni d'effets CSS doublons */
@@ -91,7 +95,7 @@ html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -14px)
 .logo-scan { position: absolute; top: -12%; bottom: -12%; left: 0; width: 2px; opacity: 0; pointer-events: none; background: linear-gradient(to bottom, transparent, #bfe9ff 20%, #fff 50%, #c7b2ff 80%, transparent); box-shadow: 0 0 18px 4px rgba(24, 185, 255, .65), 0 0 50px 10px rgba(103, 45, 255, .35); }
 .slide-title .media .bg-video, .slide-title .media > img { filter: var(--grade) brightness(.6); }
 .slide-title.is-active .media .bg-video { animation: slowZoom 26s linear both; transform-origin: 50% 45%; }
-@keyframes slowZoom { from { transform: scale(1); } to { transform: scale(1.14); } }
+@keyframes slowZoom { from { transform: scale(1); } to { transform: scale(1.06); } }
 .intro-black { position: absolute; inset: 0; z-index: 4; background: #000; opacity: 0; pointer-events: none; }
 /* déroulé (≈ 4 s) : noir → vidéo assombrie en fondu → logo révélé par un balayage de lumière → titre */
 .slide-title.intro .intro-black { animation: introBlack 1.5s ease .25s both; }
@@ -113,7 +117,7 @@ html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -14px)
 }
 @keyframes logoScan { 0% { left: 0; opacity: 0; } 12% { opacity: 1; } 85% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
 @keyframes logoShine { 0% { opacity: 1; background-position: 100% 0; } 100% { opacity: 1; background-position: 0 0; } }
-@keyframes titleIn { from { opacity: 0; transform: translateY(18px); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes titleIn { from { opacity: 0; transform: translateY(18px); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
 .big-lines { font-size: clamp(2rem, 4.6vw, 4.8rem); line-height: 1.1; margin: 0; max-width: 18ch; }
 .big-lines span { display: block; }
 
@@ -217,7 +221,7 @@ html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -14px)
 .holo-canvas canvas:active { cursor: grabbing; }
 .holo-label { position: absolute; left: 50%; top: 2%; margin: 0; transform: translateX(-50%); font-size: clamp(.8rem, 1.2vw, 1.05rem); font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #bfe6ff; text-shadow: 0 0 14px rgba(24, 185, 255, .9); pointer-events: none; white-space: nowrap; }
 .holo-label.pop { animation: labelPop .9s var(--ease) both; }
-@keyframes labelPop { from { opacity: 0; letter-spacing: .5em; filter: blur(4px); } to { opacity: 1; letter-spacing: .22em; filter: blur(0); } }
+@keyframes labelPop { from { opacity: 0; letter-spacing: .5em; filter: blur(4px); } to { opacity: 1; letter-spacing: .22em; filter: none; } }
 .holo-next { position: absolute; right: 2%; bottom: 2%; display: inline-flex; align-items: center; gap: .3em; padding: .5em .7em .5em 1em; border-radius: 999px; border: 1px solid rgba(143, 216, 255, .55); background: rgba(6, 22, 56, .72); color: #e6f3ff; font: 700 clamp(.8rem, 1.1vw, 1rem) / 1.2 var(--font); cursor: pointer; box-shadow: 0 0 18px rgba(8, 125, 255, .35); transition: background .25s, box-shadow .25s; }
 .holo-next:hover { background: rgba(8, 125, 255, .45); box-shadow: 0 0 26px rgba(8, 125, 255, .7); }
 .holo-next .ico { width: 1.2em; height: 1.2em; }
@@ -261,7 +265,7 @@ html.px-on .slide.has-media > .fx-canvas { translate: calc(var(--px, 0) * -14px)
 /* ------------------------------------------------------------------ rendu « film » : grain, vignettage, bandes cinéma */
 .film { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .8s ease; }
 .page-present.film-on .film { opacity: 1; }
-.film-grain { position: absolute; inset: -160px; background-size: 160px 160px; opacity: .065; will-change: transform; }
+.film-grain { position: absolute; inset: -160px; background-size: 160px 160px; opacity: .03; will-change: transform; }
 .film-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 78% at 50% 46%, rgba(2, 6, 18, 0) 55%, rgba(2, 6, 18, .5) 100%); }
 .film-bars::before, .film-bars::after { content: ""; position: absolute; left: 0; right: 0; height: clamp(8px, 2.2vh, 26px); background: #000; transform: scaleY(0); transition: transform .9s var(--ease); }
 .film-bars::before { top: 0; transform-origin: top; }

@@ -291,7 +291,7 @@ export function createHolo(host, opts) {
 
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance', premultipliedAlpha: true });
   if (!renderer.getContext()) throw new Error('no webgl');
-  const PR = Math.min(window.devicePixelRatio || 1, 1.5);
+  const PR = Math.min(window.devicePixelRatio || 1, 2);
   renderer.setPixelRatio(PR);
   renderer.setClearColor(0x000000, 0);
   const canvas = renderer.domElement;
