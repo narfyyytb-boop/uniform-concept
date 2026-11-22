@@ -56,7 +56,7 @@
         else reject(new Error('missing ' + base));
       };
       img.sizes = '100vw';
-      img.srcset = base + '-sm.webp 960w, ' + base + '.webp 1920w';
+      img.srcset = base + '-sm.webp 960w, ' + base + '.webp 2560w';
       img.src = base + '.webp';
     });
   }
